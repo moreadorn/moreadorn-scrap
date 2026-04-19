@@ -52,8 +52,8 @@ urlpatterns = [
     path('waste-leads/', views.waste_leads, name='waste_leads'),
     path('waste-leads/delete/', views.delete_waste_leads, name='delete_waste_leads'),
     path('health/', views.health_check, name='health_check'),
+    path('api/create-superuser/', views.create_default_superuser, name='create_default_superuser'),
     path('api/dummy-lead/', views.create_dummy_lead, name='create_dummy_lead'),
-    path('api/dummy-lead-2/', views.create_dummy_lead_2, name='create_dummy_lead_2'),
     path('sent-leads/resend-email/', views.resend_email_view, name='resend_email'),
     path('sent-leads/resend-whatsapp/', views.resend_whatsapp_view, name='resend_whatsapp'),
 ]

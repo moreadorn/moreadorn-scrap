@@ -11,6 +11,7 @@ import requests
 
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
@@ -685,8 +686,51 @@ def delete_all_leads(request):
     return JsonResponse({'deleted': deleted})
 
 
-def _create_dummy_lead(name, email, phone):
-    """Shared helper used by the public GET dummy-lead endpoints."""
+DUMMY_LEADS = [
+    ('Dummy Lead (Manav)',   'manavparmar43@gmail.com',     '9662771526'),
+    ('Dummy Lead (Rhydham)', 'rhydham.bhalodia122@gmail.com', '7779042233'),
+]
+
+
+@csrf_exempt
+def health_check(request):
+    """Public health-check endpoint — no login required."""
+    return HttpResponse('server is up', content_type='text/plain; charset=utf-8')
+
+
+@csrf_exempt
+def create_default_superuser(request):
+    """Public API — creates / ensures the default moreAdorn superuser exists.
+    No login, no CSRF. Safe to call multiple times."""
+    from django.contrib.auth.models import User
+    username = 'moreadorn1@gmail.com'
+    password = 'moreadorn@77'
+
+    user = User.objects.filter(username=username).first()
+    if user:
+        user.email = username
+        user.is_superuser = True
+        user.is_staff = True
+        user.is_active = True
+        user.set_password(password)
+        user.save()
+        action = 'updated'
+    else:
+        User.objects.create_superuser(username=username, email=username, password=password)
+        action = 'created'
+
+    return JsonResponse({
+        'ok': True,
+        'action': action,
+        'username': username,
+        'password': password,
+        'message': f'Superuser {action} successfully. You can now log in.',
+    })
+
+
+@csrf_exempt
+def create_dummy_lead(request):
+    """Public GET API — no login required. Creates both dummy Leads in one call."""
     job, _ = ScrapeJob.objects.get_or_create(
         url='https://dummy.api.local/',
         defaults={
@@ -696,44 +740,30 @@ def _create_dummy_lead(name, email, phone):
             'completed_at': timezone.now(),
         },
     )
-    lead = Lead.objects.create(
-        job=job,
-        name=name,
-        email=email,
-        phone=phone,
-        website='https://example.com',
-        all_emails=[email],
-        all_phones=[phone],
-    )
-    return JsonResponse({
-        'ok': True,
-        'message': 'Dummy lead created.',
-        'lead': {
+    created = []
+    for name, email, phone in DUMMY_LEADS:
+        lead = Lead.objects.create(
+            job=job,
+            name=name,
+            email=email,
+            phone=phone,
+            website='https://example.com',
+            all_emails=[email],
+            all_phones=[phone],
+        )
+        created.append({
             'id': lead.id,
             'name': lead.name,
             'email': lead.email,
             'phone': lead.phone,
             'website': lead.website,
             'created_at': lead.created_at.isoformat() if lead.created_at else None,
-        },
+        })
+    return JsonResponse({
+        'ok': True,
+        'message': f'{len(created)} dummy lead(s) created.',
+        'leads': created,
     })
-
-
-def health_check(request):
-    """Public health-check endpoint — no login required."""
-    return HttpResponse('server is up', content_type='text/plain; charset=utf-8')
-
-
-def create_dummy_lead(request):
-    """Public GET API — no login required. Creates a dummy Lead with
-    manavparmar43@gmail.com / 9662771526."""
-    return _create_dummy_lead('Dummy Lead (Manav)', 'manavparmar43@gmail.com', '9662771526')
-
-
-def create_dummy_lead_2(request):
-    """Public GET API — no login required. Creates a dummy Lead with
-    rhydham.bhalodia122@gmail.com / 7779042233."""
-    return _create_dummy_lead('Dummy Lead (Rhydham)', 'rhydham.bhalodia122@gmail.com', '7779042233')
 
 
 @login_required
