@@ -1,0 +1,25 @@
+{% if paginator.num_pages > 1 %}
+<div class="pagination">
+  <a class="pg {% if not page_obj.has_previous %}disabled{% endif %}"
+     href="?page={{ page_obj.previous_page_number|default:1 }}{% if q %}&q={{ q|urlencode }}{% endif %}"
+     title="Previous page">← Prev</a>
+
+  {% for p in paginator.page_range %}
+    {% if p == page_obj.number %}
+      <span class="pg current">{{ p }}</span>
+    {% elif p == 1 or p == paginator.num_pages or p|add:-2 <= page_obj.number and p|add:2 >= page_obj.number %}
+      <a class="pg" href="?page={{ p }}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ p }}</a>
+    {% elif p == page_obj.number|add:-3 or p == page_obj.number|add:3 %}
+      <span class="pg-info">…</span>
+    {% endif %}
+  {% endfor %}
+
+  <a class="pg {% if not page_obj.has_next %}disabled{% endif %}"
+     href="?page={{ page_obj.next_page_number|default:paginator.num_pages }}{% if q %}&q={{ q|urlencode }}{% endif %}"
+     title="Next page">Next →</a>
+
+  <span class="pg-info">{{ paginator.count }} total · page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+</div>
+{% elif paginator.count %}
+<div class="pagination"><span class="pg-info">{{ paginator.count }} total</span></div>
+{% endif %}

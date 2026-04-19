@@ -1,0 +1,344 @@
+{% extends "moreadorn_app/base.html" %}
+{% block title %}Send Email{% endblock %}
+
+{% block content %}
+<style>
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .template-info {
+    background: rgba(124, 58, 237, 0.06);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--accent-light);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .no-template {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--warning);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .send-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .send-status.sending { color: var(--warning); }
+  .send-status.sent    { color: var(--success); }
+  .send-status.failed  { color: var(--danger); }
+
+  tr.row-sent td { opacity: 0.5; }
+
+  .pills-cell { max-width: 200px; word-break: break-all; }
+  .pill { font-size: 11px; }
+
+  .count-bar {
+    font-size: 13px;
+    color: var(--text2);
+    margin-left: auto;
+  }
+</style>
+
+{% if not ai_templates and not custom_templates %}
+<div class="no-template">
+  <span>⚠️</span>
+  <span>No email template found. <a href="{% url 'email_content' %}">Build or upload one first →</a></span>
+</div>
+{% else %}
+
+<!-- Template Selector -->
+<div class="card" style="padding:16px 20px; margin-bottom:16px;">
+  <label style="font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:6px;">📧 Email Template</label>
+  <select id="templateSelect" onchange="onTemplateChange()" style="width:100%; background:var(--input-bg); border:1px solid var(--input-border); border-radius:8px; padding:8px 12px; color:var(--text); font-size:13px; outline:none; cursor:pointer;">
+    {% if ai_templates %}
+    <optgroup label="✨ AI Templates">
+      {% for t in ai_templates %}
+      <option value="ai:{{ t.id }}" {% if forloop.first %}selected{% endif %}>✨ {{ t.title }}</option>
+      {% endfor %}
+    </optgroup>
+    {% endif %}
+    {% if custom_templates %}
+    <optgroup label="📝 Custom Templates">
+      {% for t in custom_templates %}
+      <option value="custom:{{ t.id }}" {% if not ai_templates and forloop.first %}selected{% endif %}>📝 {{ t.subject }}</option>
+      {% endfor %}
+    </optgroup>
+    {% endif %}
+  </select>
+
+  <!-- Actions row -->
+  <div style="margin-top:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-secondary" onclick="openPreviewModal()" style="white-space:nowrap;">👁 Preview Email</button>
+    <a href="{% url 'email_content' %}" style="font-size:12px; color:var(--accent);">+ New Template</a>
+  </div>
+</div>
+
+{% endif %}
+
+{% include "moreadorn_app/_search_bar.html" %}
+
+<div class="toolbar">
+  <input type="checkbox" id="selectAll" onchange="toggleAll(this)" title="Select all" />
+  <button class="btn btn-primary" onclick="sendSelected()">📤 Send Selected</button>
+  <button class="btn btn-danger" onclick="deleteSelected()">🗑 Delete Selected</button>
+  <button class="btn btn-secondary" onclick="clearSent()">🧹 Clear Sent Rows</button>
+  <span class="count-bar" id="countBar">0 selected</span>
+</div>
+
+<div id="sendResult" style="display:none" class="alert alert-success"></div>
+
+<div class="card" style="padding:0">
+  <div class="table-wrap" style="border:none; border-radius:var(--radius)">
+    <table id="emailTable">
+      <thead>
+        <tr>
+          <th style="width:40px"></th>
+          <th>#</th>
+          <th>Name</th>
+          <th>Best Email</th>
+          <th>All Emails</th>
+          <th>Phone</th>
+          <th>Website</th>
+          <th>Status</th>
+          <th>Created At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        {% with best=lead.best_email %}
+        <tr id="row-{{ lead.id }}" {% if not best %}style="opacity:0.5"{% endif %}>
+          <td>
+            <input type="checkbox" class="row-chk" data-id="{{ lead.id }}" data-email="{{ best|default:'' }}"
+                   {% if not best %}disabled{% endif %}
+                   onchange="updateCount()" />
+          </td>
+          <td class="text-muted text-sm">{{ lead.id }}</td>
+          <td><strong>{{ lead.name|default:"—" }}</strong></td>
+          <td>
+            {% if best %}
+              <span class="font-mono" style="font-size:12px">{{ best }}</span>
+            {% else %}
+              <span class="text-muted">No email</span>
+            {% endif %}
+          </td>
+          <td class="pills-cell">
+            {% for e in lead.display_emails %}
+              <span class="pill">{{ e }}</span>
+            {% empty %}
+              <span class="text-muted">—</span>
+            {% endfor %}
+          </td>
+          <td class="text-muted">{{ lead.phone|default:"—" }}</td>
+          <td>
+            {% if lead.website %}
+              <a href="{{ lead.website }}" target="_blank" rel="noopener" style="font-size:12px">
+                {{ lead.website|truncatechars:25 }}
+              </a>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <span class="send-status" id="status-{{ lead.id }}">—</span>
+          </td>
+          <td class="text-muted text-sm">
+            {% if lead.created_at %}{{ lead.created_at|date:"M d, Y H:i" }}{% else %}—{% endif %}
+          </td>
+          <td>
+            <button class="btn btn-primary btn-sm" onclick="sendOne({{ lead.id }})" id="sendBtn-{{ lead.id }}"
+                    {% if not best %}disabled style="opacity:0.4"{% endif %}>
+              Send
+            </button>
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr>
+          <td colspan="10" style="text-align:center; padding:40px; color:var(--text3)">
+            🎉 All leads have already been emailed! Check <a href="{% url 'sent_leads' %}">Sent Leads</a>.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "moreadorn_app/_pagination.html" %}
+
+<!-- Email Preview Modal -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal" style="max-width:720px; width:95%; max-height:92vh; padding:0; overflow:hidden; display:flex; flex-direction:column;">
+    <div class="modal-header" style="padding:14px 20px; border-bottom:1px solid var(--border); margin-bottom:0; flex-shrink:0;">
+      <h3>👁 Email Preview</h3>
+      <button class="modal-close" onclick="closePreview()">✕</button>
+    </div>
+    <iframe id="previewFrame" style="width:100%; flex:1; min-height:560px; border:none; display:block; background:#fff;"></iframe>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function getCookie(name) {
+    const val = `; ${document.cookie}`;
+    const parts = val.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+
+  function toggleAll(cb) {
+    document.querySelectorAll('.row-chk:not(:disabled)').forEach(c => {
+      c.checked = cb.checked;
+    });
+    updateCount();
+  }
+
+  function updateCount() {
+    const sel = document.querySelectorAll('.row-chk:checked').length;
+    document.getElementById('countBar').textContent = sel + ' selected';
+  }
+
+  function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.row-chk:checked'))
+      .map(c => parseInt(c.dataset.id));
+  }
+
+  function setRowStatus(id, state, msg) {
+    const el = document.getElementById('status-' + id);
+    if (!el) return;
+    el.className = 'send-status ' + state;
+    el.textContent = msg;
+    if (state === 'sent') {
+      const row = document.getElementById('row-' + id);
+      if (row) row.classList.add('row-sent');
+      const btn = document.getElementById('sendBtn-' + id);
+      if (btn) { btn.disabled = true; btn.textContent = 'Sent ✓'; }
+    }
+  }
+
+  function sendSelected() {
+    const ids = getSelectedIds();
+    if (!ids.length) { alert('Please select at least one lead.'); return; }
+    doSend(ids);
+  }
+
+  function sendOne(id) {
+    doSend([id]);
+  }
+
+  function onTemplateChange() {}
+
+  function getSelectedTemplateId() {
+    const sel = document.getElementById('templateSelect');
+    return sel && sel.value ? sel.value : null;
+  }
+
+  function doSend(ids) {
+    ids.forEach(id => setRowStatus(id, 'sending', '⏳ Sending...'));
+
+    fetch('/send-email/do/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify({
+        lead_ids: ids,
+        template_id: getSelectedTemplateId(),
+      }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        ids.forEach(id => setRowStatus(id, 'failed', '✗ ' + data.error));
+        return;
+      }
+      let sent = 0, failed = 0;
+      data.results.forEach(r => {
+        if (r.success) {
+          setRowStatus(r.id, 'sent', '✓ Sent');
+          sent++;
+        } else {
+          setRowStatus(r.id, 'failed', '✗ ' + (r.error || 'Failed'));
+          failed++;
+        }
+      });
+      const bar = document.getElementById('sendResult');
+      bar.style.display = 'flex';
+      bar.textContent = `✓ Sent: ${sent}  |  ✗ Failed: ${failed}`;
+    })
+    .catch(err => {
+      ids.forEach(id => setRowStatus(id, 'failed', '✗ Error'));
+      console.error(err);
+    });
+  }
+
+  function clearSent() {
+    document.querySelectorAll('tr.row-sent').forEach(r => r.remove());
+  }
+
+  function deleteSelected() {
+    const ids = getSelectedIds();
+    if (!ids.length) { alert('Select at least one lead to delete.'); return; }
+    if (!confirm('Delete ' + ids.length + ' lead(s) from the database? This cannot be undone.')) return;
+    fetch('/sent-leads/delete/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ lead_ids: ids }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      ids.forEach(id => {
+        const row = document.getElementById('row-' + id);
+        if (row) row.remove();
+      });
+      document.getElementById('selectAll').checked = false;
+      updateCount();
+      const bar = document.getElementById('sendResult');
+      bar.style.display = 'flex';
+      bar.className = 'alert alert-success';
+      bar.textContent = '✓ Deleted ' + (data.deleted || ids.length) + ' lead(s).';
+    })
+    .catch(err => alert('Delete failed: ' + err));
+  }
+
+  function openPreviewModal() {
+    const tid = getSelectedTemplateId();
+    if (!tid) { alert('Please select an email template first.'); return; }
+    const url = '/email-content/preview/' + encodeURIComponent(tid) + '/';
+    const frame = document.getElementById('previewFrame');
+    frame.removeAttribute('src');
+    frame.srcdoc = '<p style="font-family:sans-serif;padding:20px;color:#666">Loading...</p>';
+    document.getElementById('previewModal').classList.add('open');
+    fetch(url).then(r => r.text()).then(html => { frame.srcdoc = html; });
+  }
+  function closePreview() {
+    document.getElementById('previewModal').classList.remove('open');
+    document.getElementById('previewFrame').src = '';
+  }
+  document.getElementById('previewModal').addEventListener('click', function(e) {
+    if (e.target === this) closePreview();
+  });
+</script>
+{% endblock %}

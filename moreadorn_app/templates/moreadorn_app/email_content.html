@@ -1,0 +1,988 @@
+{% extends "moreadorn_app/base.html" %}
+{% block title %}Email Content{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Hero Stats ── */
+  .hero-stats {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 1100px) { .hero-stats { grid-template-columns: 2fr 1fr 1fr; } }
+  @media (max-width: 900px) { .hero-stats { grid-template-columns: 1fr 1fr; } }
+
+  .hero-main {
+    background: linear-gradient(135deg, var(--accent) 0%, #ec4899 100%);
+    color: #fff;
+    padding: 20px 24px;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-main::before {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 140px; height: 140px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+  }
+  .hero-main h2 { font-size: 18px; margin-bottom: 4px; font-weight: 700; letter-spacing: -0.2px; position: relative; z-index: 1; }
+  .hero-main p { font-size: 12.5px; opacity: 0.85; position: relative; z-index: 1; }
+
+  .stat-tile {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+  }
+  .stat-tile:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .stat-tile .icn { font-size: 20px; margin-bottom: 4px; }
+  .stat-tile .num { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.1; }
+  .stat-tile .lbl { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px; }
+
+  /* ── Step Header ── */
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 6px 0 16px;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+  }
+  .step-head h2 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.3px;
+  }
+  .step-head .step-sub {
+    font-size: 12px;
+    color: var(--text3);
+    font-weight: 400;
+    margin-left: 8px;
+  }
+  .step-head::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--border), transparent);
+    margin-left: 8px;
+  }
+
+  /* ── Layout Grids ── */
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .three-col { grid-template-columns: 1fr; } }
+
+  /* ── Tabs (inside merged Content+Design card) ── */
+  .cd-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .cd-tab {
+    flex: 1;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    color: var(--text2);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .cd-tab:hover { color: var(--text); }
+  .cd-tab.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+  }
+  .cd-panel { display: none; }
+  .cd-panel.active { display: block; }
+
+  .col-stack { display: flex; flex-direction: column; gap: 16px; }
+
+  .pro-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .pro-card:hover { border-color: rgba(124, 58, 237, 0.3); box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06); }
+  .pro-card .head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 14px;
+  }
+  .pro-card .head h3 {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ── Hint Boxes ── */
+  .hint-box {
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.55;
+  }
+  .hint-box.purple {
+    background: rgba(124, 58, 237, 0.06);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    color: var(--accent-light);
+  }
+  .hint-box.green {
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: var(--success);
+  }
+  .hint-box.ai {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.07), rgba(236, 72, 153, 0.05));
+    border: 1px solid rgba(124, 58, 237, 0.22);
+    color: var(--accent);
+  }
+  .hint-box code {
+    background: rgba(0,0,0,0.15);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-family: 'Courier New', monospace;
+  }
+  [data-theme="light"] .hint-box code { background: rgba(124, 58, 237, 0.12); }
+
+  /* ── Form polish ── */
+  .form-group label { font-weight: 600; }
+  .char-count {
+    font-size: 10.5px;
+    color: var(--text3);
+    text-align: right;
+    margin-top: 2px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Saved Items ── */
+  .item-list { display: flex; flex-direction: column; gap: 10px; max-height: 540px; overflow-y: auto; padding-right: 4px; }
+  .item-list::-webkit-scrollbar { width: 4px; }
+
+  .template-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  .template-item:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 12px rgba(124, 58, 237, 0.08);
+  }
+  .template-item.ai-tag {
+    border-color: rgba(124, 58, 237, 0.3);
+    background: linear-gradient(135deg, var(--bg3) 0%, rgba(124, 58, 237, 0.03) 100%);
+  }
+  .template-item.ai-tag::before {
+    content: '✨ AI';
+    position: absolute; top: 10px; right: 12px;
+    font-size: 9.5px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #ec4899);
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 12px;
+    letter-spacing: 0.5px;
+  }
+  .template-subject {
+    font-weight: 600; font-size: 13.5px; color: var(--text);
+    margin-bottom: 5px; padding-right: 50px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .template-preview {
+    font-size: 11.5px; color: var(--text3); line-height: 1.55;
+    white-space: pre-wrap; max-height: 46px; overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  }
+  .template-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+  }
+  .template-date {
+    font-size: 10.5px; color: var(--text3);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .template-actions { display: flex; gap: 6px; }
+
+  .icon-btn {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg4);
+    color: var(--text2);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 12px;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .icon-btn.danger:hover { background: var(--danger); border-color: var(--danger); }
+
+  .empty-state { text-align: center; padding: 32px 20px; color: var(--text3); }
+  .empty-state .empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.7; }
+  .empty-state p { font-size: 12.5px; line-height: 1.6; }
+
+  /* ── AI Smart Builder ── */
+  .ai-card {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(236, 72, 153, 0.04));
+    border: 1px solid rgba(124, 58, 237, 0.22);
+    border-radius: 14px;
+    padding: 24px 26px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ai-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), #ec4899, transparent);
+    animation: aishine 4s ease-in-out infinite;
+  }
+  @keyframes aishine {
+    0%, 100% { left: -100%; }
+    50% { left: 100%; }
+  }
+  .ai-card .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+  .ai-card h3 {
+    font-size: 16.5px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #ec4899);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ai-badge {
+    background: linear-gradient(135deg, var(--accent), #ec4899);
+    color: #fff; font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.8px; padding: 3px 9px; border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+  }
+  .ai-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+  @media (max-width: 700px) { .ai-row { grid-template-columns: 1fr; } }
+  .ai-row label {
+    font-size: 11px; font-weight: 700; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+  }
+  .ai-row select {
+    width: 100%; background: var(--input-bg);
+    border: 1px solid var(--input-border); border-radius: 8px;
+    padding: 10px 12px; color: var(--text); font-size: 13px;
+    outline: none; cursor: pointer;
+  }
+  .ai-row select:focus { border-color: var(--accent); }
+
+  .ai-actions {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 18px;
+  }
+  .btn-ai {
+    background: linear-gradient(135deg, var(--accent), #ec4899);
+    color: #fff; border: none;
+    padding: 10px 20px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 10px rgba(124, 58, 237, 0.2);
+  }
+  .btn-ai:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35); }
+  .btn-ai:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .ai-tip {
+    font-size: 12px; color: var(--text3);
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+
+  /* ── Modal Toolbar ── */
+  .modal-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px; border-bottom: 1px solid var(--border);
+    background: var(--card-bg); flex-shrink: 0; gap: 10px;
+    min-height: 56px;
+  }
+  .modal-toolbar .left {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 15px; font-weight: 600; color: var(--text);
+    white-space: nowrap;
+  }
+  .modal-toolbar .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  /* AI modal — richer two-row header */
+  .ai-modal-header {
+    padding: 16px 22px 14px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(to right, rgba(124, 58, 237, 0.05), transparent);
+    flex-shrink: 0;
+  }
+  .ai-modal-top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 12px;
+  }
+  .ai-modal-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 16px; font-weight: 700; color: var(--text);
+    white-space: nowrap;
+  }
+  .ai-modal-title .ai-icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #ec4899);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+    flex-shrink: 0;
+  }
+  .ai-modal-subtitle {
+    font-size: 11.5px; font-weight: 400; color: var(--text3);
+    margin-top: 2px; letter-spacing: 0.2px;
+  }
+  .ai-modal-bottom {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+
+  .ai-status {
+    font-size: 12.5px; color: var(--text2);
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px; border-radius: 20px;
+    background: var(--bg3); border: 1px solid var(--border);
+    flex: 1; min-width: 0;
+  }
+  .ai-status.loading {
+    color: var(--accent-light);
+    background: rgba(124, 58, 237, 0.08);
+    border-color: rgba(124, 58, 237, 0.25);
+  }
+  .ai-status.success {
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.25);
+  }
+  .ai-status.error {
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+  .ai-modal-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+  .ai-modal-actions .modal-close {
+    width: 30px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+  .ai-modal-actions .modal-close:hover {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+  }
+  .btn-save-tpl {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: var(--success);
+    padding: 8px 14px; border-radius: 8px;
+    font-size: 12.5px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: all 0.15s;
+  }
+  .btn-save-tpl:hover:not(:disabled) {
+    background: rgba(16, 185, 129, 0.22);
+    transform: translateY(-1px);
+  }
+  .btn-save-tpl:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-ai-alt {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: #fff; border: none;
+    padding: 9px 16px; border-radius: 8px;
+    font-size: 12.5px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 10px rgba(59, 130, 246, 0.2);
+  }
+  .btn-ai-alt:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35); }
+  .btn-ai-alt:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .ai-spinner {
+    display: inline-block;
+    width: 13px; height: 13px;
+    border: 2px solid rgba(124, 58, 237, 0.25); border-top-color: var(--accent);
+    border-radius: 50%; animation: aispin 0.8s linear infinite;
+    vertical-align: middle; margin-right: 5px;
+  }
+  @keyframes aispin { to { transform: rotate(360deg); } }
+</style>
+
+<!-- ── Hero Stats ── -->
+<div class="hero-stats">
+  <div class="hero-main">
+    <h2>📬 Email Content Studio</h2>
+    <p>Build content, design layouts, upload custom templates, and let AI craft professional outreach.</p>
+  </div>
+  <div class="stat-tile">
+    <div class="icn">📧</div>
+    <div class="num">{{ templates|length }}</div>
+    <div class="lbl">Templates</div>
+  </div>
+  <div class="stat-tile">
+    <div class="icn">🎨</div>
+    <div class="num">{{ designs|length }}</div>
+    <div class="lbl">Designs</div>
+  </div>
+  <div class="stat-tile">
+    <div class="icn">✨</div>
+    <div class="num">{{ ai_templates|length }}</div>
+    <div class="lbl">AI-Crafted</div>
+  </div>
+  <div class="stat-tile">
+    <div class="icn">📝</div>
+    <div class="num">{{ custom_templates|length }}</div>
+    <div class="lbl">Custom</div>
+  </div>
+</div>
+
+<div class="three-col">
+
+  <!-- ── Column 1 · Email Content + Design (merged) ── -->
+  <div class="col-stack">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <h2>Email Content &amp; Design</h2>
+    </div>
+
+    <div class="pro-card">
+      <div class="cd-tabs" role="tablist">
+        <button type="button" class="cd-tab active" data-cd-tab="content" onclick="switchCD('content')">
+          ✏️ Content <span class="badge badge-info" style="margin-left:2px;">{{ templates|length }}</span>
+        </button>
+        <button type="button" class="cd-tab" data-cd-tab="design" onclick="switchCD('design')">
+          🖌 Design <span class="badge badge-info" style="margin-left:2px;">{{ designs|length }}</span>
+        </button>
+      </div>
+
+      <!-- Content Panel -->
+      <div class="cd-panel active" id="cdPanel-content">
+        <div class="hint-box purple">
+          <span>💡</span>
+          <span>Use <code>{{name}}</code> for the lead's business name.</span>
+        </div>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="template" />
+          <div class="form-group">
+            <label for="subject">Email Subject</label>
+            <input type="text" id="subject" name="subject" maxlength="150"
+                   placeholder="Partnership opportunity with {{name}}"
+                   oninput="updateCharCount('subject','subjectCount',150)" />
+            <div class="char-count"><span id="subjectCount">0</span> / 150</div>
+          </div>
+          <div class="form-group">
+            <label for="body">Email Body</label>
+            <textarea id="body" name="body" rows="8"
+              placeholder="Write your email body here.&#10;HTML tags are supported."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">💾 Save Template</button>
+        </form>
+
+        <div style="margin-top:20px; padding-top:18px; border-top:1px solid var(--border);">
+          <h4 style="font-size:13px; font-weight:600; color:var(--text2); margin-bottom:10px;">📋 Saved Templates</h4>
+          {% if templates %}
+          <div class="item-list">
+            {% for tpl in templates %}
+            <div class="template-item {% if '[AI]' in tpl.subject %}ai-tag{% endif %}">
+              <div class="template-subject">{{ tpl.subject }}</div>
+              <div class="template-preview">{{ tpl.body|striptags|truncatechars:100 }}</div>
+              <div class="template-footer">
+                <span class="template-date">🕒 {{ tpl.updated_at|date:"M d, H:i" }}</span>
+                <div class="template-actions">
+                  <button class="icon-btn" title="Preview"
+                    onclick="openPreview('{% url 'preview_email_template' tpl.pk %}', '{{ tpl.subject|escapejs }}')">👁</button>
+                  <form method="post" action="{% url 'delete_email_template' tpl.pk %}"
+                        onsubmit="return confirm('Delete this template?')" style="display:inline">
+                    {% csrf_token %}
+                    <button type="submit" class="icon-btn danger" title="Delete">🗑</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <p>No templates yet.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Design Panel -->
+      <div class="cd-panel" id="cdPanel-design">
+        <div class="hint-box green">
+          <span>💡</span>
+          <span>Use <code>{{content}}</code> and <code>{{name}}</code> placeholders.</span>
+        </div>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="design" />
+          <div class="form-group">
+            <label for="design_name">Design Name</label>
+            <input type="text" id="design_name" name="design_name" maxlength="100"
+                   placeholder="Purple Header, Minimal..." />
+          </div>
+          <div class="form-group">
+            <label for="design_html">Full HTML Layout</label>
+            <textarea id="design_html" name="design_html" rows="10"
+              placeholder="&lt;!DOCTYPE html&gt;&#10;&lt;html&gt;...&#10;  {{content}}&#10;...&lt;/html&gt;"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">💾 Save Design</button>
+        </form>
+
+        <div style="margin-top:20px; padding-top:18px; border-top:1px solid var(--border);">
+          <h4 style="font-size:13px; font-weight:600; color:var(--text2); margin-bottom:10px;">🖼 Saved Designs</h4>
+          {% if designs %}
+          <div class="item-list">
+            {% for d in designs %}
+            <div class="template-item">
+              <div class="template-subject">{{ d.name }}</div>
+              <div class="template-preview">{{ d.html|striptags|truncatechars:100 }}</div>
+              <div class="template-footer">
+                <span class="template-date">🕒 {{ d.updated_at|date:"M d, H:i" }}</span>
+                <div class="template-actions">
+                  <button class="icon-btn" title="Preview"
+                    onclick="openPreview('{% url 'preview_email_design' d.pk %}', '{{ d.name|escapejs }}')">👁</button>
+                  <form method="post" action="{% url 'delete_email_design' d.pk %}"
+                        onsubmit="return confirm('Delete this design?')" style="display:inline">
+                    {% csrf_token %}
+                    <button type="submit" class="icon-btn danger" title="Delete">🗑</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <div class="empty-icon">🖼</div>
+            <p>No designs yet.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Column 2 · AI Smart Builder ── -->
+  <div class="col-stack">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <h2>AI Smart Builder</h2>
+    </div>
+
+    <div class="ai-card">
+      <div class="head">
+        <h3>✨ Combine & Polish <span class="ai-badge">AI</span></h3>
+      </div>
+      <div class="hint-box ai">
+        <span>🤖</span>
+        <span>Let <strong>moreAdorn</strong> craft your perfect outreach — pick a template and a design, hit Preview, and watch our smart engine transform your message into a polished, professional email. Save the result and send it with confidence.</span>
+      </div>
+
+      <div class="form-group">
+        <label style="font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px;">📝 Email Subject</label>
+        <input type="text" id="aiSubjectInput" placeholder="Partnership opportunity — moreAdorn Import/Export" maxlength="200" />
+      </div>
+
+      <div class="form-group">
+        <label style="font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px;">📧 Email Content</label>
+        <select id="aiContentSelect" style="width:100%; background:var(--input-bg); border:1px solid var(--input-border); border-radius:8px; padding:10px 12px; color:var(--text); font-size:13px; outline:none; cursor:pointer;">
+          <option value="">— Choose a template —</option>
+          {% for t in templates %}
+          <option value="{{ t.id }}">{{ t.subject }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label style="font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px;">🎨 Email Design</label>
+        <select id="aiDesignSelect" style="width:100%; background:var(--input-bg); border:1px solid var(--input-border); border-radius:8px; padding:10px 12px; color:var(--text); font-size:13px; outline:none; cursor:pointer;">
+          <option value="">— Default moreAdorn design —</option>
+          {% for d in designs %}
+          <option value="{{ d.id }}">{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button class="btn-ai" onclick="openAIPreview()" style="width:100%; justify-content:center; margin-top:6px;">
+        👁 Preview & Polish
+      </button>
+      <div style="text-align:center; margin-top:10px;">
+        <span class="ai-tip">💎 Powered by moreAdorn</span>
+      </div>
+    </div>
+
+    <div class="pro-card">
+      <div class="head">
+        <h3>✨ AI Templates <span class="badge badge-info">{{ ai_templates|length }}</span></h3>
+      </div>
+      {% if ai_templates %}
+      <div class="item-list">
+        {% for tpl in ai_templates %}
+        <div class="template-item ai-tag">
+          <div class="template-subject">{{ tpl.title }}</div>
+          <div class="template-preview">{{ tpl.html|striptags|truncatechars:100 }}</div>
+          <div class="template-footer">
+            <span class="template-date">🕒 {{ tpl.updated_at|date:"M d, H:i" }}</span>
+            <div class="template-actions">
+              <button class="icon-btn" title="Preview"
+                onclick="openPreview('{% url 'preview_ai_template' tpl.pk %}', '{{ tpl.title|escapejs }}')">👁</button>
+              <form method="post" action="{% url 'delete_ai_template' tpl.pk %}"
+                    onsubmit="return confirm('Delete this AI template?')" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="icon-btn danger" title="Delete">🗑</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">✨</div>
+        <p>No AI templates yet.<br>Use the builder above.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Step 3 · Upload Custom Template (full-width) ── -->
+<div class="step-head">
+  <div class="step-num">3</div>
+  <h2>Upload Custom Template</h2>
+  <span class="step-sub">Skip AI — upload your own subject + ready HTML. Shown directly in Send Email.</span>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">
+  <div class="pro-card" style="margin-bottom:0">
+    <div class="head">
+      <h3>📝 Upload Ready Template</h3>
+    </div>
+    <div class="hint-box purple">
+      <span>💡</span>
+      <span>Paste a full HTML email (design + content together). Use <code>{{name}}</code> for the recipient's business name. No AI formatting will be applied.</span>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="form_type" value="custom" />
+      <div class="form-group">
+        <label for="custom_subject">Email Subject</label>
+        <input type="text" id="custom_subject" name="custom_subject" maxlength="255"
+               placeholder="Partnership opportunity with {{name}}"
+               oninput="updateCharCount('custom_subject','customSubjectCount',255)" />
+        <div class="char-count"><span id="customSubjectCount">0</span> / 255</div>
+      </div>
+      <div class="form-group">
+        <label for="custom_html">Email HTML (design + content mixed)</label>
+        <textarea id="custom_html" name="custom_html" rows="12"
+          placeholder="&lt;!DOCTYPE html&gt;&#10;&lt;html&gt;&#10;  &lt;body&gt;&#10;    &lt;p&gt;Dear {{name}},&lt;/p&gt;&#10;    &lt;p&gt;Your full message here...&lt;/p&gt;&#10;  &lt;/body&gt;&#10;&lt;/html&gt;"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%">💾 Save Custom Template</button>
+    </form>
+  </div>
+
+  <div class="pro-card" style="margin-bottom:0">
+    <div class="head">
+      <h3>📋 Saved Custom <span class="badge badge-info">{{ custom_templates|length }}</span></h3>
+    </div>
+    {% if custom_templates %}
+    <div class="item-list">
+      {% for tpl in custom_templates %}
+      <div class="template-item">
+        <div class="template-subject">{{ tpl.subject }}</div>
+        <div class="template-preview">{{ tpl.html|striptags|truncatechars:120 }}</div>
+        <div class="template-footer">
+          <span class="template-date">🕒 {{ tpl.updated_at|date:"M d, H:i" }}</span>
+          <div class="template-actions">
+            <button class="icon-btn" title="Preview"
+              onclick="openPreview('{% url 'preview_custom_template' tpl.pk %}', '{{ tpl.subject|escapejs }}')">👁</button>
+            <form method="post" action="{% url 'delete_custom_template' tpl.pk %}"
+                  onsubmit="return confirm('Delete this custom template?')" style="display:inline">
+              {% csrf_token %}
+              <button type="submit" class="icon-btn danger" title="Delete">🗑</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📝</div>
+      <p>No custom templates yet.<br>Paste your ready-to-send HTML on the left.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Simple Preview Modal -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal" style="max-width:780px; width:95%; max-height:92vh; padding:0; overflow:hidden; display:flex; flex-direction:column;">
+    <div class="modal-toolbar">
+      <div class="left"><span>👁</span> <span id="previewModalTitle">Preview</span></div>
+      <button class="modal-close" onclick="closePreview()">✕</button>
+    </div>
+    <iframe id="previewFrame" style="width:100%; flex:1; min-height:580px; border:none; display:block; background:#fff;"></iframe>
+  </div>
+</div>
+
+<!-- AI Smart Preview Modal -->
+<div class="modal-overlay" id="aiModal">
+  <div class="modal" style="max-width:920px; width:96%; max-height:94vh; padding:0; overflow:hidden; display:flex; flex-direction:column;">
+    <div class="ai-modal-header">
+      <div class="ai-modal-top">
+        <div class="ai-modal-title">
+          <div class="ai-icon">✨</div>
+          <div>
+            <div>Smart Preview</div>
+            <div class="ai-modal-subtitle">Powered by moreAdorn</div>
+          </div>
+        </div>
+        <div class="ai-modal-actions">
+          <button class="modal-close" onclick="closeAIModal()" title="Close">✕</button>
+        </div>
+      </div>
+      <div class="ai-modal-bottom">
+        <div id="aiStatus" class="ai-status">Use AI to rewrite or re-structure your message professionally.</div>
+        <div class="ai-modal-actions">
+          <button class="btn-ai" id="aiRunBtn" onclick="runAI()" title="Rewrite content attractively with Dear Sir/Mam greeting">✨ Set Content by AI</button>
+          <button class="btn-ai-alt" id="aiFmtBtn" onclick="runAIFormat()" title="Restructure existing content into proper email format">📐 Set Position by AI</button>
+          <button class="btn-save-tpl" id="aiSaveBtn" onclick="saveAITemplate()" disabled>💾 Save Template</button>
+        </div>
+      </div>
+    </div>
+    <div id="aiSubjectBar" style="padding:12px 22px; background:var(--bg3); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; flex-shrink:0;">
+      <span style="font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:1px;">Subject</span>
+      <span id="aiSubjectText" style="font-size:13.5px; font-weight:600; color:var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">— No subject —</span>
+    </div>
+    <iframe id="aiFrame" style="width:100%; flex:1; min-height:560px; border:none; display:block; background:#fff;"></iframe>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let aiSavedPayload = null;
+
+  function getCookie(name) {
+    const val = '; ' + document.cookie;
+    const parts = val.split('; ' + name + '=');
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+
+  function updateCharCount(inputId, counterId, max) {
+    const input = document.getElementById(inputId);
+    document.getElementById(counterId).textContent = input.value.length;
+  }
+
+  /* ── Content / Design tab switcher ── */
+  function switchCD(tab) {
+    document.querySelectorAll('.cd-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.cdTab === tab);
+    });
+    document.querySelectorAll('.cd-panel').forEach(p => {
+      p.classList.toggle('active', p.id === 'cdPanel-' + tab);
+    });
+  }
+
+  // Count AI templates on load
+  (function countAI() {
+    const aiItems = document.querySelectorAll('.template-item.ai-tag').length;
+    document.getElementById('aiCount').textContent = aiItems;
+  })();
+
+  /* ── Simple Preview Modal ── */
+  function openPreview(url, label) {
+    document.getElementById('previewModalTitle').textContent = 'Preview — ' + label;
+    const frame = document.getElementById('previewFrame');
+    frame.removeAttribute('src');
+    frame.srcdoc = '<p style="font-family:sans-serif;padding:20px;color:#666">Loading preview...</p>';
+    document.getElementById('previewModal').classList.add('open');
+    fetch(url).then(r => r.text()).then(html => { frame.srcdoc = html; });
+  }
+  function closePreview() {
+    document.getElementById('previewModal').classList.remove('open');
+    document.getElementById('previewFrame').srcdoc = '';
+  }
+  document.getElementById('previewModal').addEventListener('click', function(e) {
+    if (e.target === this) closePreview();
+  });
+
+  /* ── AI Smart Preview ── */
+  function _getAISubject() {
+    const s = document.getElementById('aiSubjectInput');
+    return s ? s.value.trim() : '';
+  }
+  function _setSubjectBar(text) {
+    const el = document.getElementById('aiSubjectText');
+    if (el) el.textContent = text || '— No subject —';
+  }
+
+  function openAIPreview() {
+    const tid = document.getElementById('aiContentSelect').value;
+    const did = document.getElementById('aiDesignSelect').value;
+    const subj = _getAISubject();
+    if (!subj) { alert('Please enter an email subject first.'); return; }
+    if (!tid) { alert('Please pick an email content template.'); return; }
+    let url = '/email-content/preview/' + tid + '/';
+    if (did) url += '?design_id=' + did;
+
+    aiSavedPayload = null;
+    document.getElementById('aiSaveBtn').disabled = true;
+    _setSubjectBar(subj);
+    setAIStatus('loading', 'Loading preview...');
+    document.getElementById('aiModal').classList.add('open');
+
+    const frame = document.getElementById('aiFrame');
+    frame.removeAttribute('src');
+    frame.srcdoc = '';
+
+    fetch(url)
+      .then(r => r.text())
+      .then(html => {
+        frame.srcdoc = html;
+        setAIStatus('', 'Click "Set Content by AI" to rewrite your message professionally.');
+      })
+      .catch(err => setAIStatus('error', '✗ Failed to load preview: ' + err));
+  }
+  function closeAIModal() {
+    document.getElementById('aiModal').classList.remove('open');
+    const frame = document.getElementById('aiFrame');
+    frame.removeAttribute('srcdoc');
+    frame.src = 'about:blank';
+  }
+  document.getElementById('aiModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAIModal();
+  });
+
+  function setAIStatus(cls, msg) {
+    const el = document.getElementById('aiStatus');
+    el.className = 'ai-status ' + cls;
+    el.innerHTML = (cls === 'loading' ? '<span class="ai-spinner"></span>' : '') + msg;
+  }
+
+  function runAI()       { _callAI('/ai-generate-email/', 'AI is rewriting your content...'); }
+  function runAIFormat() { _callAI('/ai-format-email/',   'AI is restructuring your content...'); }
+
+  function _callAI(endpoint, loadingMsg) {
+    const tid = document.getElementById('aiContentSelect').value;
+    const did = document.getElementById('aiDesignSelect').value;
+    if (!tid) { alert('Please pick a content template first.'); return; }
+    const runBtn = document.getElementById('aiRunBtn');
+    const fmtBtn = document.getElementById('aiFmtBtn');
+    runBtn.disabled = true;
+    fmtBtn.disabled = true;
+    setAIStatus('loading', loadingMsg);
+
+    fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ template_id: parseInt(tid), design_id: did ? parseInt(did) : null }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      runBtn.disabled = false;
+      fmtBtn.disabled = false;
+      if (data.error) { setAIStatus('error', '✗ ' + data.error); return; }
+      // Use the user-entered subject, not the original template's subject
+      const userSubj = _getAISubject() || data.subject;
+      aiSavedPayload = { subject: userSubj, html: data.sendable_html };
+      _setSubjectBar(userSubj);
+      const frame = document.getElementById('aiFrame');
+      frame.removeAttribute('src');
+      frame.srcdoc = data.preview_html;
+      setAIStatus('success', '✓ AI-crafted email ready — click Save Template to keep it.');
+      document.getElementById('aiSaveBtn').disabled = false;
+    })
+    .catch(err => {
+      runBtn.disabled = false;
+      fmtBtn.disabled = false;
+      setAIStatus('error', '✗ Network error: ' + err);
+    });
+  }
+
+  /* ── Save AI Template ── */
+  function saveAITemplate() {
+    if (!aiSavedPayload) return;
+    const subject = _getAISubject() || aiSavedPayload.subject;
+    if (!subject) { alert('Please enter an email subject first.'); return; }
+    const btn = document.getElementById('aiSaveBtn');
+    btn.disabled = true;
+    setAIStatus('loading', 'Saving template...');
+
+    fetch('/ai-save-template/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ title: subject, html: aiSavedPayload.html }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { setAIStatus('error', '✗ ' + data.error); btn.disabled = false; return; }
+      setAIStatus('success', '✓ Saved as "' + data.subject + '" — reloading...');
+      setTimeout(() => { location.reload(); }, 1200);
+    })
+    .catch(err => {
+      btn.disabled = false;
+      setAIStatus('error', '✗ Save failed: ' + err);
+    });
+  }
+</script>
+{% endblock %}

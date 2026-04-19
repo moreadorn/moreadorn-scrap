@@ -1,0 +1,192 @@
+{% extends "moreadorn_app/base.html" %}
+{% block title %}Waste Leads{% endblock %}
+
+{% block content %}
+<style>
+  .hero-waste {
+    background: linear-gradient(135deg, #ef4444, #f97316);
+    color: #fff; padding: 20px 26px; border-radius: 14px;
+    margin-bottom: 20px; position: relative; overflow: hidden;
+  }
+  .hero-waste::before {
+    content: ''; position: absolute; top: -50px; right: -50px;
+    width: 160px; height: 160px; background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+  }
+  .hero-waste h2 { font-size: 18px; margin-bottom: 3px; font-weight: 700; position: relative; z-index: 1; }
+  .hero-waste p { font-size: 12.5px; opacity: 0.9; line-height: 1.55; position: relative; z-index: 1; }
+
+  .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .count-bar { font-size: 13px; color: var(--text2); margin-left: auto; }
+
+  .filter-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-tab {
+    padding: 6px 14px; border-radius: 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    font-size: 12.5px; font-weight: 500;
+    color: var(--text2); cursor: pointer;
+    transition: all 0.15s; text-decoration: none;
+  }
+  .filter-tab:hover { border-color: var(--accent); color: var(--accent-light); }
+  .filter-tab.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+  }
+
+  .err-cell {
+    font-size: 11px;
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.08);
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ok-cell {
+    font-size: 11px; color: var(--success);
+  }
+  .no-value { color: var(--text3); font-size: 11px; }
+</style>
+
+<div class="hero-waste">
+  <h2>🗑 Waste Leads</h2>
+  <p>Leads where email and/or WhatsApp couldn't be sent — missing address, invalid number, API error, etc. Review and clean up here.</p>
+</div>
+
+{% include "moreadorn_app/_search_bar.html" %}
+
+<div class="filter-tabs">
+  <a href="?{% if q %}q={{ q|urlencode }}{% endif %}"
+     class="filter-tab {% if not filt %}active{% endif %}">All</a>
+  <a href="?filter=email{% if q %}&q={{ q|urlencode }}{% endif %}"
+     class="filter-tab {% if filt == 'email' %}active{% endif %}">📧 Email failed</a>
+  <a href="?filter=contact{% if q %}&q={{ q|urlencode }}{% endif %}"
+     class="filter-tab {% if filt == 'contact' %}active{% endif %}">📱 Contact failed</a>
+</div>
+
+<div class="toolbar">
+  <input type="checkbox" id="selectAll" onchange="toggleAll(this)" title="Select all on this page" />
+  <button class="btn btn-danger" onclick="deleteSelected()">🗑 Delete Selected</button>
+  <button class="btn btn-danger" onclick="deleteAllWaste()" style="background:rgba(239,68,68,0.2)">💥 Delete ALL Waste</button>
+  <span class="count-bar" id="countBar">0 selected · {{ paginator.count }} total</span>
+</div>
+
+<div id="actionMsg" style="display:none" class="alert alert-success mb-3"></div>
+
+<div class="card" style="padding:0">
+  <div class="table-wrap" style="border:none; border-radius:var(--radius)">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px"></th>
+          <th>#</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Email Status</th>
+          <th>Phone</th>
+          <th>Contact Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr id="row-{{ lead.id }}">
+          <td><input type="checkbox" class="row-chk" data-id="{{ lead.id }}" onchange="updateCount()" /></td>
+          <td class="text-muted text-sm">{{ lead.id }}</td>
+          <td><strong>{{ lead.name|default:"—" }}</strong></td>
+          <td class="font-mono" style="font-size:12px">{{ lead.best_email|default:"—" }}</td>
+          <td>
+            {% if lead.is_westemail %}
+              <span class="err-cell" title="{{ lead.error_mail }}">✗ {{ lead.error_mail|truncatechars:40 }}</span>
+            {% else %}
+              <span class="ok-cell">—</span>
+            {% endif %}
+          </td>
+          <td class="font-mono" style="font-size:12px">{{ lead.best_phone|default:"—" }}</td>
+          <td>
+            {% if lead.is_westcontact %}
+              <span class="err-cell" title="{{ lead.error_contact }}">✗ {{ lead.error_contact|truncatechars:40 }}</span>
+            {% else %}
+              <span class="ok-cell">—</span>
+            {% endif %}
+          </td>
+          <td class="text-muted text-sm">{% if lead.created_at %}{{ lead.created_at|date:"M d, H:i" }}{% else %}—{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align:center; padding:40px; color:var(--text3)">
+            🎉 No waste leads! All your contacts are healthy.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "moreadorn_app/_pagination.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function getCookie(name) {
+    const val = '; ' + document.cookie;
+    const parts = val.split('; ' + name + '=');
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+  function toggleAll(cb) {
+    document.querySelectorAll('.row-chk').forEach(c => c.checked = cb.checked);
+    updateCount();
+  }
+  function updateCount() {
+    const sel = document.querySelectorAll('.row-chk:checked').length;
+    const total = {{ paginator.count|default:0 }};
+    document.getElementById('countBar').textContent = sel + ' selected · ' + total + ' total';
+  }
+  function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.row-chk:checked')).map(c => parseInt(c.dataset.id));
+  }
+
+  function deleteSelected() {
+    const ids = getSelectedIds();
+    if (!ids.length) { alert('Select at least one lead.'); return; }
+    if (!confirm('Delete ' + ids.length + ' waste lead(s)? This cannot be undone.')) return;
+    fetch('{% url "delete_waste_leads" %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ lead_ids: ids }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      ids.forEach(id => { const row = document.getElementById('row-' + id); if (row) row.remove(); });
+      const bar = document.getElementById('actionMsg');
+      bar.style.display = 'flex';
+      bar.textContent = '✓ Deleted ' + (data.deleted || ids.length) + ' waste lead(s).';
+      document.getElementById('selectAll').checked = false;
+      updateCount();
+    });
+  }
+
+  function deleteAllWaste() {
+    if (!confirm('⚠️ Permanently delete ALL waste leads from the database? This cannot be undone.')) return;
+    if (!confirm('Really delete every waste lead?')) return;
+    fetch('{% url "delete_waste_leads" %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      body: JSON.stringify({ all: true }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      alert('✓ Deleted ' + (data.deleted || 0) + ' waste lead(s).');
+      location.reload();
+    });
+  }
+</script>
+{% endblock %}

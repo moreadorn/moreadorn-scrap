@@ -1,0 +1,4 @@
+.env
+moreadorn_app/migrations
+moreadorn_app/__pycache__
+moreadorn_scrape/__pycache__

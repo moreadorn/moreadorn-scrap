@@ -1,0 +1,379 @@
+{% extends "moreadorn_app/base.html" %}
+{% block title %}Sent Leads{% endblock %}
+
+{% block content %}
+<style>
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .count-bar { font-size: 13px; color: var(--text2); margin-left: auto; }
+
+  .sent-badge   { color: var(--success); font-weight: 600; font-size: 12px; }
+  .unsent-badge { color: var(--text3); font-size: 12px; }
+  .sent-date    { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .resend-result {
+    font-size: 12px;
+    margin-top: 4px;
+    display: none;
+  }
+  .resend-result.success { color: var(--success); display: block; }
+  .resend-result.error   { color: var(--danger); display: block; }
+  .resend-result.sending { color: var(--warning); display: block; }
+
+  .name-input {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    width: 140px;
+    transition: border .15s, background .15s;
+  }
+  .name-input:hover { border-color: var(--border); background: var(--surface); }
+  .name-input:focus { border-color: var(--accent); background: var(--surface); outline: none; }
+
+  .tmpl-row {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .tmpl-box {
+    flex: 1; min-width: 240px;
+    background: var(--card);
+    border: 1px solid var(--border2, var(--border));
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .tmpl-box label { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing:.5px; display:block; margin-bottom:8px; }
+  .tmpl-select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .tmpl-preview {
+    font-size: 12px;
+    color: var(--text2);
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 8px 10px;
+    max-height: 80px;
+    overflow: hidden;
+    white-space: pre-wrap;
+    display: none;
+  }
+</style>
+
+<!-- Template Selectors for Resend -->
+<div class="tmpl-row">
+  {% if email_templates %}
+  <div class="tmpl-box">
+    <label>📧 Email Template for Resend</label>
+    <select id="resendEmailTmpl" class="tmpl-select" onchange="updateEmailPreview()">
+      {% for t in email_templates %}
+      <option value="{{ t.id }}" data-subject="{{ t.subject|escapejs }}" data-body="{{ t.body|escapejs }}">
+        {{ t.subject }}
+      </option>
+      {% endfor %}
+    </select>
+    <div class="tmpl-preview" id="emailTmplPrev"></div>
+  </div>
+  {% endif %}
+  {% if wa_templates %}
+  <div class="tmpl-box">
+    <label>💬 WhatsApp Template for Resend</label>
+    <select id="resendWaTmpl" class="tmpl-select" onchange="updateWaPreview()">
+      {% for t in wa_templates %}
+      <option value="{{ t.id }}" data-content="{{ t.content|escapejs }}">
+        Template #{{ t.id }} — {{ t.updated_at|date:"d M Y" }}
+      </option>
+      {% endfor %}
+    </select>
+    <div class="tmpl-preview" id="waTmplPrev"></div>
+  </div>
+  {% endif %}
+</div>
+
+{% include "moreadorn_app/_search_bar.html" %}
+
+<div class="toolbar">
+  <input type="checkbox" id="selectAll" onchange="toggleAll(this)" title="Select all" />
+  <button class="btn btn-danger" onclick="deleteSelected()">🗑 Delete Selected</button>
+  <span class="count-bar" id="countBar">0 selected</span>
+</div>
+
+<div id="actionMsg" style="display:none" class="alert alert-success mb-3"></div>
+
+<div class="card" style="padding:0">
+  <div class="table-wrap" style="border:none; border-radius:var(--radius)">
+    <table id="sentTable">
+      <thead>
+        <tr>
+          <th style="width:40px"></th>
+          <th>#</th>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>Website</th>
+          <th>Email Sent</th>
+          <th>WA Sent</th>
+          <th>Created At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr id="row-{{ lead.id }}">
+          <td>
+            <input type="checkbox" class="row-chk" data-id="{{ lead.id }}" onchange="updateCount()" />
+          </td>
+          <td class="text-muted text-sm">{{ lead.id }}</td>
+          <td>
+            <input class="name-input" id="name-{{ lead.id }}" value="{{ lead.name|default:'' }}"
+                   placeholder="—" title="Edit name for resend" />
+          </td>
+          <td class="text-muted" style="font-size:12px">{{ lead.best_phone|default:"—" }}</td>
+          <td style="font-size:12px">
+            {% if lead.best_email %}
+              <span class="font-mono">{{ lead.best_email }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if lead.website %}
+              <a href="{{ lead.website }}" target="_blank" rel="noopener" style="font-size:12px">
+                {{ lead.website|truncatechars:25 }}
+              </a>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <!-- Email Sent -->
+          <td>
+            {% if lead.email_sent %}
+              <span class="sent-badge">✓ Sent</span>
+              {% if lead.email_sent_at %}
+                <div class="sent-date">{{ lead.email_sent_at|date:"M d, Y H:i" }}</div>
+              {% endif %}
+            {% else %}
+              <span class="unsent-badge">✗ Not sent</span>
+            {% endif %}
+          </td>
+          <!-- WA Sent -->
+          <td>
+            {% if lead.whatsapp_sent %}
+              <span class="sent-badge">✓ Sent</span>
+              {% if lead.whatsapp_sent_at %}
+                <div class="sent-date">{{ lead.whatsapp_sent_at|date:"M d, Y H:i" }}</div>
+              {% endif %}
+            {% else %}
+              <span class="unsent-badge">✗ Not sent</span>
+            {% endif %}
+          </td>
+          <!-- Created At -->
+          <td class="text-muted text-sm">
+            {% if lead.created_at %}{{ lead.created_at|date:"M d, Y H:i" }}{% else %}—{% endif %}
+          </td>
+          <!-- Actions -->
+          <td>
+            <div class="action-btns">
+              <button class="btn btn-secondary btn-sm" onclick="resendEmail({{ lead.id }}, this)"
+                      {% if not email_templates %}disabled title="No email template"{% endif %}>
+                📧 Re-email
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="resendWA({{ lead.id }}, this)"
+                      {% if not wa_templates %}disabled title="No WA template"{% endif %}>
+                📱 Re-WA
+              </button>
+            </div>
+            <div class="resend-result" id="resend-{{ lead.id }}"></div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" style="text-align:center; padding:40px; color:var(--text3)">
+            No sent leads yet. Go to <a href="{% url 'send_email' %}">Send Email</a> or
+            <a href="{% url 'send_whatsapp' %}">Send WhatsApp</a> to get started.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "moreadorn_app/_pagination.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function getCookie(name) {
+    const val = `; ${document.cookie}`;
+    const parts = val.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+
+  // Template previews
+  function updateEmailPreview() {
+    const sel = document.getElementById('resendEmailTmpl');
+    if (!sel) return;
+    const opt = sel.options[sel.selectedIndex];
+    const prev = document.getElementById('emailTmplPrev');
+    prev.textContent = 'Subject: ' + opt.dataset.subject + '\n\n' + opt.dataset.body.slice(0, 200) + '…';
+    prev.style.display = 'block';
+  }
+  function updateWaPreview() {
+    const sel = document.getElementById('resendWaTmpl');
+    if (!sel) return;
+    const opt = sel.options[sel.selectedIndex];
+    const prev = document.getElementById('waTmplPrev');
+    prev.textContent = opt.dataset.content.slice(0, 200) + '…';
+    prev.style.display = 'block';
+  }
+  window.addEventListener('DOMContentLoaded', () => { updateEmailPreview(); updateWaPreview(); });
+
+  function getEmailTmplId() {
+    const s = document.getElementById('resendEmailTmpl');
+    return s ? parseInt(s.value) : null;
+  }
+  function getWaTmplId() {
+    const s = document.getElementById('resendWaTmpl');
+    return s ? parseInt(s.value) : null;
+  }
+  function getNameForLead(id) {
+    const inp = document.getElementById('name-' + id);
+    return inp ? inp.value.trim() : '';
+  }
+
+  function toggleAll(cb) {
+    document.querySelectorAll('.row-chk').forEach(c => { c.checked = cb.checked; });
+    updateCount();
+  }
+
+  function updateCount() {
+    const sel = document.querySelectorAll('.row-chk:checked').length;
+    document.getElementById('countBar').textContent = sel + ' selected';
+  }
+
+  function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.row-chk:checked'))
+      .map(c => parseInt(c.dataset.id));
+  }
+
+  function showMsg(el, cls, text) {
+    el.className = 'resend-result ' + cls;
+    el.textContent = text;
+  }
+
+  function deleteSelected() {
+    const ids = getSelectedIds();
+    if (!ids.length) { alert('Select at least one lead.'); return; }
+    if (!confirm(`Delete ${ids.length} lead(s)? This cannot be undone.`)) return;
+
+    fetch('/sent-leads/delete/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify({ lead_ids: ids }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      ids.forEach(id => {
+        const row = document.getElementById('row-' + id);
+        if (row) row.remove();
+      });
+      const bar = document.getElementById('actionMsg');
+      bar.style.display = 'flex';
+      bar.textContent = `✓ Deleted ${data.deleted} lead(s).`;
+      document.getElementById('selectAll').checked = false;
+      updateCount();
+    })
+    .catch(err => console.error(err));
+  }
+
+  function resendEmail(id, btn) {
+    const result = document.getElementById('resend-' + id);
+    showMsg(result, 'sending', '⏳ Sending...');
+    btn.disabled = true;
+
+    fetch('/sent-leads/resend-email/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify({
+        lead_ids: [id],
+        template_id: getEmailTmplId(),
+        names: { [id]: getNameForLead(id) },
+      }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      if (data.error) { showMsg(result, 'error', '✗ ' + data.error); return; }
+      const r = data.results && data.results[0];
+      if (r && r.success) showMsg(result, 'success', '✓ Email sent to ' + r.to);
+      else showMsg(result, 'error', '✗ ' + (r ? r.error : 'Failed'));
+    })
+    .catch(() => { btn.disabled = false; showMsg(result, 'error', '✗ Network error'); });
+  }
+
+  function resendWA(id, btn) {
+    const result = document.getElementById('resend-' + id);
+    showMsg(result, 'sending', '⏳ Processing...');
+    btn.disabled = true;
+
+    fetch('/sent-leads/resend-whatsapp/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify({
+        lead_ids: [id],
+        template_id: getWaTmplId(),
+        names: { [id]: getNameForLead(id) },
+      }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      if (data.error) {
+        showMsg(result, 'error', '✗ ' + data.error);
+        return;
+      }
+      const r = data.results && data.results[0];
+      if (r && r.success) {
+        window.open(r.wa_url, '_blank');
+        showMsg(result, 'success', '✓ WhatsApp opened');
+      } else {
+        showMsg(result, 'error', '✗ ' + (r ? r.error : 'Failed'));
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      showMsg(result, 'error', '✗ Network error');
+    });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lead Scraper — moreAdorn</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #08080d;
+      --surface:  #0f0f18;
+      --card:     #13131e;
+      --border:   #1e1e30;
+      --border2:  #252535;
+      --accent:   #7c3aed;
+      --accent2:  #a855f7;
+      --green:    #10b981;
+      --green2:   #34d399;
+      --red:      #ef4444;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --muted2:   #94a3b8;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    .logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .brand { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
+    .badge {
+      background: rgba(124,58,237,.2);
+      color: #c084fc;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+      border: 1px solid rgba(124,58,237,.35);
+      letter-spacing: .5px; text-transform: uppercase;
+    }
+    .header-right {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .header-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+    .header-status { font-size: 12px; color: var(--muted2); }
+
+    /* ─── LAYOUT ─── */
+    .page { max-width: 1060px; margin: 0 auto; padding: 36px 20px 60px; }
+
+    /* ─── HERO ─── */
+    .hero-title {
+      font-size: 26px; font-weight: 800;
+      letter-spacing: -.5px; color: #fff;
+      margin-bottom: 6px;
+    }
+    .hero-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+
+    /* ─── INPUT CARD ─── */
+    .input-card {
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .input-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: .7px; margin-bottom: 10px;
+    }
+    .url-row { display: flex; gap: 10px; }
+    .url-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px; font-family: inherit;
+      outline: none;
+      transition: border .18s, box-shadow .18s;
+    }
+    .url-input::placeholder { color: #374151; }
+    .url-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,58,237,.15);
+    }
+    .btn-start {
+      padding: 12px 22px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 10px;
+      color: #fff; font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer; white-space: nowrap;
+      transition: opacity .18s, transform .1s;
+    }
+    .btn-start:hover:not(:disabled) { opacity: .88; }
+    .btn-start:active:not(:disabled) { transform: scale(.98); }
+    .btn-start:disabled { opacity: .4; cursor: not-allowed; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px; color: var(--muted);
+    }
+    .chip em { font-style: normal; color: var(--muted2); }
+
+    /* ─── ALERT ─── */
+    .alert {
+      display: none;
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px; color: #fca5a5;
+      margin-bottom: 16px;
+    }
+
+    /* ─── JOB CARD ─── */
+    .job-card {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 26px 28px;
+      margin-bottom: 20px;
+    }
+    .job-card-top {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 26px;
+    }
+    .job-id-label { font-size: 12px; color: var(--muted); }
+    .job-id-value { font-size: 13px; color: var(--muted2); font-family: monospace; }
+    .btn-refresh {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      color: var(--muted2); font-size: 13px; font-weight: 500;
+      font-family: inherit; cursor: pointer;
+      transition: border .15s, color .15s, background .15s;
+    }
+    .btn-refresh:hover { border-color: var(--accent); color: #c084fc; background: rgba(124,58,237,.08); }
+    .btn-refresh:disabled { opacity: .4; cursor: not-allowed; }
+    .spin-icon { display: inline-block; }
+    .spin-icon.spinning { animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── STEPS ─── */
+    .steps {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .step {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+      flex-shrink: 0;
+    }
+    .step-circle {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      transition: background .3s, border .3s, box-shadow .3s;
+    }
+    .step-label {
+      font-size: 11px; font-weight: 600;
+      text-align: center; white-space: nowrap;
+      transition: color .3s;
+    }
+
+    /* States */
+    .step.inactive .step-circle {
+      background: var(--surface);
+      border: 2px solid var(--border2);
+      color: var(--muted);
+    }
+    .step.inactive .step-label { color: var(--muted); }
+
+    .step.active .step-circle {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: 2px solid transparent;
+      color: #fff;
+      box-shadow: 0 0 22px rgba(124,58,237,.5);
+    }
+    .step.active .step-label { color: #c084fc; }
+
+    .step.done .step-circle {
+      background: rgba(16,185,129,.15);
+      border: 2px solid var(--green);
+      color: var(--green);
+    }
+    .step.done .step-label { color: var(--green2); }
+
+    .step.error-step .step-circle {
+      background: rgba(239,68,68,.1);
+      border: 2px solid var(--red);
+      color: var(--red);
+    }
+
+    .step-pulse {
+      width: 14px; height: 14px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    .step-line {
+      flex: 1;
+      height: 2px;
+      margin: 0 8px;
+      margin-bottom: 19px;
+      border-radius: 2px;
+      background: var(--border2);
+      transition: background .4s;
+    }
+    .step-line.done-line { background: var(--green); }
+    .step-line.active-line {
+      background: linear-gradient(90deg, var(--green), var(--accent));
+    }
+
+    /* ─── PROGRESS MSG ─── */
+    .progress-row {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .progress-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent2);
+      animation: pulse-dot 1.5s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    .progress-dot.green { background: var(--green); animation: none; }
+    .progress-dot.red { background: var(--red); animation: none; }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(.7); }
+    }
+    .progress-msg { font-size: 13px; color: var(--muted2); }
+    .progress-msg.done { color: var(--green2); }
+    .progress-msg.error { color: #fca5a5; }
+
+    /* ─── STATS BAR ─── */
+    .stats-bar {
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    .stat-value {
+      font-size: 26px; font-weight: 800;
+      color: #fff; line-height: 1; margin-bottom: 4px;
+    }
+    .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .stat-card.highlight { border-color: rgba(16,185,129,.3); }
+    .stat-card.highlight .stat-value { color: var(--green2); }
+
+    /* ─── RESULTS HEADER ─── */
+    .results-header {
+      display: none;
+      align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px;
+      margin-bottom: 12px;
+    }
+    .results-title { font-size: 15px; font-weight: 700; color: #fff; }
+    .results-actions { display: flex; gap: 10px; }
+
+    .btn-download {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 18px;
+      background: rgba(16,185,129,.15);
+      border: 1px solid rgba(16,185,129,.4);
+      border-radius: 9px;
+      color: var(--green2); font-size: 13px; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-download:hover { background: rgba(16,185,129,.25); }
+
+    .btn-new {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 9px;
+      color: var(--muted2); font-size: 13px; font-weight: 500;
+      font-family: inherit; cursor: pointer;
+      transition: background .15s, border .15s;
+    }
+    .btn-new:hover { background: var(--card); border-color: var(--muted); }
+
+    /* ─── TABLE ─── */
+    .table-wrap {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    thead tr { background: #10101a; }
+    thead th {
+      padding: 12px 16px;
+      font-size: 11px; font-weight: 700;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: .6px; white-space: nowrap;
+      border-bottom: 1px solid var(--border2);
+    }
+    thead th.site-h { color: rgba(52,211,153,.7); border-left: 1px solid #1a3028; }
+    tbody tr {
+      border-bottom: 1px solid #13131e;
+      transition: background .12s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,.025); }
+    tbody td {
+      padding: 12px 16px;
+      font-size: 13px; color: #cbd5e1;
+      max-width: 200px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      vertical-align: middle;
+    }
+    td.num { color: #374151; font-size: 12px; width: 40px; }
+    td.biz-name { color: #e2e8f0; font-weight: 600; }
+    td.site-d { border-left: 1px solid #1a3028; }
+    td a { color: #818cf8; text-decoration: none; }
+    td a:hover { text-decoration: underline; }
+    td.site-d a { color: var(--green2); }
+    .dash { color: #1e2a3a; font-style: italic; }
+    .site-tag {
+      display: inline-block;
+      font-size: 9px; font-weight: 800;
+      background: rgba(16,185,129,.15);
+      color: var(--green2);
+      border: 1px solid rgba(16,185,129,.3);
+      padding: 1px 5px; border-radius: 4px;
+      margin-right: 4px; letter-spacing: .3px; vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── HEADER ─── -->
+<header>
+  <div class="logo">🎯</div>
+  <div class="brand">moreAdorn</div>
+  <div class="badge">Lead Scraper</div>
+  <div class="header-right">
+    <div class="header-dot"></div>
+    <span class="header-status">Live</span>
+  </div>
+</header>
+
+<!-- ─── PAGE ─── -->
+<div class="page">
+
+  <div class="hero-title">Extract Business Leads</div>
+  <div class="hero-sub">Google Maps, LinkedIn, Instagram, ya koi bhi website ka URL paste karo — data automatically milega.</div>
+
+  <!-- INPUT CARD -->
+  <div class="input-card">
+    <div class="input-label">Source URL</div>
+    <div class="url-row">
+      <input id="urlInput" class="url-input" type="text"
+        placeholder="https://www.google.com/maps/search/...  |  any website URL"
+        autocomplete="off"/>
+      <button class="btn-start" id="startBtn" onclick="startScrape()">🚀 Start Scraping</button>
+    </div>
+    <div class="chips">
+      <div class="chip">🗺️ <em>Google Maps</em></div>
+      <div class="chip">💼 <em>LinkedIn</em></div>
+      <div class="chip">📸 <em>Instagram</em></div>
+      <div class="chip">🌐 <em>Any Website</em></div>
+    </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert" id="alertBox"></div>
+
+  <!-- JOB CARD -->
+  <div class="job-card" id="jobCard">
+    <div class="job-card-top">
+      <div>
+        <div class="job-id-label">Job ID</div>
+        <div class="job-id-value" id="jobIdDisplay">—</div>
+      </div>
+      <button class="btn-refresh" id="refreshBtn" onclick="manualRefresh()">
+        <span class="spin-icon" id="spinIcon">⟳</span> Refresh
+      </button>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step done" id="step-1">
+        <div class="step-circle">✓</div>
+        <div class="step-label">Submitted</div>
+      </div>
+      <div class="step-line" id="line-1"></div>
+
+      <div class="step inactive" id="step-2">
+        <div class="step-circle">2</div>
+        <div class="step-label">Scraping</div>
+      </div>
+      <div class="step-line" id="line-2"></div>
+
+      <div class="step inactive" id="step-3">
+        <div class="step-circle">3</div>
+        <div class="step-label">Enriching</div>
+      </div>
+      <div class="step-line" id="line-3"></div>
+
+      <div class="step inactive" id="step-4">
+        <div class="step-circle">4</div>
+        <div class="step-label">Complete</div>
+      </div>
+    </div>
+
+    <!-- Progress message -->
+    <div class="progress-row">
+      <div class="progress-dot" id="progressDot"></div>
+      <div class="progress-msg" id="progressMsg">Initializing…</div>
+    </div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card highlight">
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-label">Total Leads</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statPhone">0</div>
+      <div class="stat-label">With Phone</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statEmail">0</div>
+      <div class="stat-label">With Email</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statSiteEmail">0</div>
+      <div class="stat-label">With Website Email</div>
+    </div>
+  </div>
+
+  <!-- RESULTS HEADER -->
+  <div class="results-header" id="resultsHeader">
+    <div class="results-title">Leads Found</div>
+    <div class="results-actions">
+      <button class="btn-new" onclick="newSearch()">+ New Search</button>
+      <button class="btn-download" id="dlBtn" onclick="downloadAndClear()">⬇ Download CSV &amp; Clear</button>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap" id="tableWrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Business Name</th>
+          <th>Phone</th>
+          <th>Website</th>
+          <th>Email</th>
+          <th class="site-h">📞 Website Phone</th>
+          <th class="site-h">✉️ Website Email</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+  const CSRF = '{{ csrf_token }}';
+  let currentJobId = null;
+  let pollTimer = null;
+  let scrapedResults = [];
+
+  function csrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : CSRF;
+  }
+
+  /* ─── UI helpers ─── */
+  function showAlert(msg) {
+    const b = document.getElementById('alertBox');
+    b.innerHTML = '⚠️ &nbsp;' + esc(msg);
+    b.style.display = 'block';
+  }
+  function hideAlert() { document.getElementById('alertBox').style.display = 'none'; }
+
+  function setStartBtn(busy) {
+    const btn = document.getElementById('startBtn');
+    btn.disabled = busy;
+    btn.textContent = busy ? '⏳ Starting…' : '🚀 Start Scraping';
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function trunc(s, n) { return s && s.length > n ? s.slice(0, n) + '…' : (s || ''); }
+
+  /* ─── STEP INDICATOR ─── */
+  function updateSteps(step, status) {
+    const labels = ['Submitted','Scraping','Enriching','Complete'];
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('step-' + i);
+      const circle = el.querySelector('.step-circle');
+      if (status === 'error' && i === step) {
+        el.className = 'step error-step';
+        circle.innerHTML = '✕';
+      } else if (i < step || (status === 'done' && i <= 4)) {
+        el.className = 'step done';
+        circle.innerHTML = '✓';
+      } else if (i === step && status !== 'done') {
+        el.className = 'step active';
+        circle.innerHTML = '<div class="step-pulse"></div>';
+      } else {
+        el.className = 'step inactive';
+        circle.textContent = i;
+      }
+    }
+    // Lines
+    for (let i = 1; i <= 3; i++) {
+      const line = document.getElementById('line-' + i);
+      if (status === 'done' || i < step) {
+        line.className = 'step-line done-line';
+      } else if (i === step - 1) {
+        line.className = 'step-line active-line';
+      } else {
+        line.className = 'step-line';
+      }
+    }
+  }
+
+  function updateProgressDot(status) {
+    const dot = document.getElementById('progressDot');
+    const msg = document.getElementById('progressMsg');
+    dot.className = 'progress-dot';
+    msg.className = 'progress-msg';
+    if (status === 'done') { dot.classList.add('green'); msg.classList.add('done'); }
+    if (status === 'error') { dot.classList.add('red'); msg.classList.add('error'); }
+  }
+
+  /* ─── POLLING ─── */
+  function startPolling(jobId) {
+    stopPolling();
+    pollStatus(jobId);
+    pollTimer = setInterval(() => pollStatus(jobId), 3000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  async function pollStatus(jobId) {
+    try {
+      const resp = await fetch('/status/' + jobId + '/');
+      if (!resp.ok) { stopPolling(); return; }
+      const data = await resp.json();
+      applyStatus(data);
+      if (data.status === 'done' || data.status === 'error') stopPolling();
+    } catch (e) { /* network hiccup, try again next tick */ }
+  }
+
+  function applyStatus(data) {
+    updateSteps(data.current_step || 1, data.status);
+    updateProgressDot(data.status);
+    document.getElementById('progressMsg').textContent = data.progress_msg || '';
+
+    if (data.status === 'done') {
+      scrapedResults = data.results || [];
+      renderStats(scrapedResults);
+      renderTable(scrapedResults);
+    }
+    if (data.status === 'error') {
+      showAlert(data.error || 'Unknown error occurred.');
+    }
+  }
+
+  /* ─── MANUAL REFRESH ─── */
+  async function manualRefresh() {
+    if (!currentJobId) return;
+    const btn = document.getElementById('refreshBtn');
+    const icon = document.getElementById('spinIcon');
+    btn.disabled = true;
+    icon.classList.add('spinning');
+    await pollStatus(currentJobId);
+    setTimeout(() => { btn.disabled = false; icon.classList.remove('spinning'); }, 600);
+  }
+
+  /* ─── START SCRAPE ─── */
+  async function startScrape() {
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) { showAlert('Please enter a URL first.'); return; }
+
+    hideAlert();
+    setStartBtn(true);
+    stopPolling();
+    scrapedResults = [];
+
+    // Reset UI
+    document.getElementById('jobCard').style.display = 'none';
+    document.getElementById('statsBar').style.display = 'none';
+    document.getElementById('resultsHeader').style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('tableBody').innerHTML = '';
+    updateSteps(1, 'pending');
+
+    try {
+      const resp = await fetch('/scrape/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+        body: JSON.stringify({ url }),
+      });
+      const data = await resp.json();
+      if (data.error) { showAlert(data.error); setStartBtn(false); return; }
+
+      currentJobId = data.job_id;
+      document.getElementById('jobIdDisplay').textContent = currentJobId.slice(0, 8) + '…';
+      document.getElementById('jobCard').style.display = 'block';
+      startPolling(currentJobId);
+
+    } catch (e) {
+      showAlert('Network error: ' + e.message);
+    } finally {
+      setStartBtn(false);
+    }
+  }
+
+  /* ─── STATS ─── */
+  function renderStats(data) {
+    document.getElementById('statTotal').textContent = data.length;
+    document.getElementById('statPhone').textContent = data.filter(r => r.phone).length;
+    document.getElementById('statEmail').textContent = data.filter(r => r.email).length;
+    document.getElementById('statSiteEmail').textContent = data.filter(r => r.site_email).length;
+    document.getElementById('statsBar').style.display = 'grid';
+  }
+
+  /* ─── TABLE ─── */
+  function renderTable(data) {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+
+    data.forEach((row, i) => {
+      const tr = document.createElement('tr');
+
+      const ws = row.website
+        ? `<a href="${esc(row.website)}" target="_blank" rel="noopener">${esc(trunc(row.website, 36))}</a>`
+        : `<span class="dash">—</span>`;
+      const em = row.email
+        ? `<a href="mailto:${esc(row.email)}">${esc(row.email)}</a>`
+        : `<span class="dash">—</span>`;
+      const sp = row.site_phone
+        ? `<span class="site-tag">SITE</span>${esc(row.site_phone)}`
+        : `<span class="dash">—</span>`;
+      const se = row.site_email
+        ? `<span class="site-tag">SITE</span><a href="mailto:${esc(row.site_email)}">${esc(row.site_email)}</a>`
+        : `<span class="dash">—</span>`;
+
+      tr.innerHTML = `
+        <td class="num">${i + 1}</td>
+        <td class="biz-name">${esc(row.name || '—')}</td>
+        <td>${esc(row.phone || '') || '<span class="dash">—</span>'}</td>
+        <td>${ws}</td>
+        <td>${em}</td>
+        <td class="site-d">${sp}</td>
+        <td class="site-d">${se}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('resultsHeader').style.display = 'flex';
+    document.getElementById('tableWrap').style.display = 'block';
+  }
+
+  /* ─── DOWNLOAD + CLEAR FROM DB ─── */
+  async function downloadAndClear() {
+    if (!currentJobId) return;
+    const btn = document.getElementById('dlBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Downloading…';
+
+    try {
+      const resp = await fetch('/download/' + currentJobId + '/');
+      if (!resp.ok) { showAlert('Download failed.'); return; }
+
+      const blob = await resp.blob();
+      const cd = resp.headers.get('Content-Disposition') || '';
+      const fname = (cd.match(/filename="?([^"]+)"?/) || [])[1] || 'leads.csv';
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fname;
+      link.click();
+      URL.revokeObjectURL(link.href);
+
+      // Clear UI — data deleted from DB on server
+      setTimeout(newSearch, 400);
+    } catch (e) {
+      showAlert('Download error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '⬇ Download CSV &amp; Clear';
+    }
+  }
+
+  /* ─── NEW SEARCH ─── */
+  function newSearch() {
+    stopPolling();
+    currentJobId = null;
+    scrapedResults = [];
+    document.getElementById('urlInput').value = '';
+    document.getElementById('jobCard').style.display = 'none';
+    document.getElementById('statsBar').style.display = 'none';
+    document.getElementById('resultsHeader').style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('tableBody').innerHTML = '';
+    hideAlert();
+    document.getElementById('urlInput').focus();
+  }
+
+  /* Enter key */
+  document.getElementById('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startScrape();
+  });
+</script>
+</body>
+</html>
