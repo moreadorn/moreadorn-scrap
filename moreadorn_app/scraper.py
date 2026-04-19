@@ -1,8 +1,22 @@
+import os
 import re
 import time
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs, urljoin
+
+# On serverless hosts (Vercel, AWS Lambda, etc.) HOME is read-only, Chrome
+# binaries aren't available, and webdriver-manager can't cache drivers.
+# Detect it so we can short-circuit Selenium paths before they crash.
+IS_SERVERLESS = bool(
+    os.environ.get('VERCEL')
+    or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')
+    or os.environ.get('NETLIFY')
+)
+# Redirect webdriver-manager's cache to /tmp (the only writable path on Vercel)
+# so the import itself doesn't blow up if something touches it indirectly.
+os.environ.setdefault('WDM_LOCAL', '1')
+os.environ.setdefault('HOME', os.environ.get('HOME') or '/tmp')
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -36,6 +50,13 @@ def scrape_platform(url):
     url_type = detect_url_type(url)
     try:
         if url_type == 'google_maps':
+            if IS_SERVERLESS:
+                return [{
+                    'name': 'Google Maps scraping unavailable on serverless',
+                    'phone': '',
+                    'website': url,
+                    'email': 'Google Maps requires a headless Chrome browser, which is not supported on serverless hosts like Vercel. Run this app on a traditional VM / container to scrape Google Maps.',
+                }]
             return scrape_google_maps(url)
         elif url_type == 'linkedin':
             return scrape_linkedin(url)
