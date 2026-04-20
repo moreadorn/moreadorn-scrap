@@ -10,10 +10,10 @@ class ScrapeJob(models.Model):
         ('error', 'Error'),
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    url = models.CharField(max_length=2000)
-    status = models.CharField(max_length=10, choices=STATUS, default='pending')
+    url = models.TextField()
+    status = models.TextField(choices=STATUS, default='pending')
     current_step = models.IntegerField(default=1)
-    progress_msg = models.CharField(max_length=500, blank=True, default='Initializing...')
+    progress_msg = models.TextField(blank=True, default='Initializing...')
     error_msg = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -24,12 +24,12 @@ class ScrapeJob(models.Model):
 
 class Lead(models.Model):
     job = models.ForeignKey(ScrapeJob, on_delete=models.CASCADE, related_name='leads')
-    name = models.CharField(max_length=255, blank=True)
-    phone = models.CharField(max_length=100, blank=True)
-    website = models.CharField(max_length=2000, blank=True)
-    email = models.CharField(max_length=254, blank=True)
-    site_phone = models.CharField(max_length=100, blank=True)
-    site_email = models.CharField(max_length=254, blank=True)
+    name = models.TextField(blank=True)
+    phone = models.TextField(blank=True)
+    website = models.TextField(blank=True)
+    email = models.TextField(blank=True)
+    site_phone = models.TextField(blank=True)
+    site_email = models.TextField(blank=True)
     all_emails = models.JSONField(default=list, blank=True)
     all_phones = models.JSONField(default=list, blank=True)
     email_sent = models.BooleanField(default=False)
@@ -75,7 +75,7 @@ class Lead(models.Model):
 
 
 class EmailTemplate(models.Model):
-    subject = models.CharField(max_length=255)
+    subject = models.TextField()
     body = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -86,7 +86,7 @@ class EmailTemplate(models.Model):
 
 class AIEmailTemplate(models.Model):
     """AI-generated email templates — kept separate from manually authored EmailTemplate."""
-    title = models.CharField(max_length=255)
+    title = models.TextField()
     html = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -98,7 +98,7 @@ class AIEmailTemplate(models.Model):
 class CustomEmailTemplate(models.Model):
     """User-uploaded full templates — subject + ready-to-send HTML (design + content merged).
     No AI formatting step. Selectable on the Send Email page alongside AI templates."""
-    subject = models.CharField(max_length=255)
+    subject = models.TextField()
     html = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -109,8 +109,8 @@ class CustomEmailTemplate(models.Model):
 
 class GeminiAPIKey(models.Model):
     """User-provided Gemini API keys. Only one can be active at a time."""
-    key = models.CharField(max_length=255, unique=True)
-    label = models.CharField(max_length=100, blank=True)
+    key = models.TextField(unique=True)
+    label = models.TextField(blank=True)
     is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -126,9 +126,9 @@ class GeminiAPIKey(models.Model):
 
 class WhatsAppConfig(models.Model):
     """User-provided Meta WhatsApp Cloud API credentials. Only one can be active."""
-    phone_number_id = models.CharField(max_length=100)
+    phone_number_id = models.TextField()
     access_token = models.TextField()
-    label = models.CharField(max_length=100, blank=True)
+    label = models.TextField(blank=True)
     is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -144,7 +144,7 @@ class WhatsAppConfig(models.Model):
 
 
 class EmailDesign(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.TextField()
     html = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
