@@ -12,6 +12,10 @@ IS_SERVERLESS = bool(
     os.environ.get('VERCEL')
     or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')
     or os.environ.get('NETLIFY')
+    or os.environ.get('RENDER')  # Render doesn't ship Chrome binaries by default
+    or os.environ.get('RAILWAY_ENVIRONMENT')
+    or os.environ.get('FLY_APP_NAME')
+    or os.environ.get('PYTHONANYWHERE_DOMAIN')
 )
 # Redirect webdriver-manager's cache to /tmp (the only writable path on Vercel)
 # so the import itself doesn't blow up if something touches it indirectly.
