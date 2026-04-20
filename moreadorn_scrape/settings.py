@@ -31,7 +31,17 @@ SECRET_KEY = "django-insecure-jf62+s9o1r57q-_f!8j@kfy@t!moqo56%2q$4z6x!t(l=e8md*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['https://moreadorn-scrap.onrender.com']
+ALLOWED_HOSTS = [
+    'moreadorn-scrap.onrender.com',
+    '.onrender.com',
+    'localhost',
+    '127.0.0.1',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://moreadorn-scrap.onrender.com',
+    'https://*.onrender.com',
+]
 
 
 # Application definition
